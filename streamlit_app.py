@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
-st.title('ZOIR-STREAMLIT')
+st.title('Zoir-STREAMLIT')
 
 with st.expander('Initial data'):
     df = pd.read_csv('https://raw.githubusercontent.com/dataprofessor/data/master/penguins_cleaned.csv')
@@ -28,8 +28,6 @@ with st.sidebar:
     flipper_length_mm = st.slider('Flipper length (mm)', 172.0, 231.0, 201.0)
     body_mass_g = st.slider('Body mass (g)', 2700.0, 6300.0, 4207.0)
     gender = st.selectbox('Gender', ('male', 'female'))
-    
-    # Create a DataFrame for the input features
     data = {
         'island': island,
         'bill_length_mm': bill_length_mm,
@@ -41,15 +39,14 @@ with st.sidebar:
     input_df = pd.DataFrame(data, index=[0])
     input_penguins = pd.concat([input_df, X_raw], axis=0)
 
-# Data preparation
-# Encode X
+
 encode = ['island', 'sex']
 df_penguins = pd.get_dummies(input_penguins, prefix=encode)
 
 X = df_penguins[1:]
 input_row = df_penguins[:1]
 
-# Encode y
+
 target_mapper = {'Adelie': 0, 'Chinstrap': 1, 'Gentoo': 2}
 y = y_raw.map(target_mapper)
 
@@ -62,13 +59,12 @@ with st.expander('Data preparation'):
 clf = RandomForestClassifier()
 clf.fit(X, y)
 
-# Apply model to make predictions
+
 prediction = clf.predict(input_row)
 prediction_proba = clf.predict_proba(input_row)
 
 df_prediction_proba = pd.DataFrame(prediction_proba, columns=['Adelie', 'Chinstrap', 'Gentoo'])
 
-# Display predicted species
 st.subheader('Predicted Species')
 st.dataframe(df_prediction_proba,
              column_config={
