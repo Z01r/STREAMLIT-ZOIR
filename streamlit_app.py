@@ -1,5 +1,10 @@
 import streamlit as st
 import pandas as pd
+streamlit
+pandas
+numpy
+scikit-learn
+
 
 st.title('ZOIR-STREAMLIT')
 
@@ -59,8 +64,6 @@ with st.expander('Data preparation'):
   input_row
   st.write('**Encoded y**')
   y
-  # Model training and inference
-## Train the ML model
 clf = RandomForestClassifier()
 clf.fit(X, y)
 
