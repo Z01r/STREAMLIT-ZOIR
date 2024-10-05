@@ -1,9 +1,6 @@
 import streamlit as st
 import pandas as pd
-streamlit
-pandas
-numpy
-scikit-learn
+
 
 
 st.title('ZOIR-STREAMLIT')
