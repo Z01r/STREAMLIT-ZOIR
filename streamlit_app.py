@@ -29,6 +29,16 @@ def plot_roc_curve(y_test, y_pred_proba):
     plt.legend(loc='lower right')
     st.pyplot(plt)
 
+# Функция для визуализации матрицы ошибок
+def plot_confusion_matrix(y_true, y_pred):
+    conf_matrix = confusion_matrix(y_true, y_pred)
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=['Отказ', 'Прием'], yticklabels=['Отказ', 'Прием'])
+    plt.ylabel('Истинные значения')
+    plt.xlabel('Предсказанные значения')
+    plt.title('Матрица ошибок')
+    st.pyplot(plt)
+
 # Заголовок приложения
 st.title("Модель классификации для выбора детского сада")
 
@@ -40,6 +50,12 @@ data = pd.read_csv(url, header=None, names=columns)
 # Отображение данных
 st.subheader("Данные")
 st.write(data)
+
+# Анализ распределения целевой переменной
+st.subheader("Распределение целевой переменной")
+sns.countplot(data=data, x='decision')
+plt.title('Распределение целевой переменной (decision)')
+st.pyplot(plt)
 
 # Кодирование категориальных признаков
 data_encoded = pd.get_dummies(data, drop_first=True)
@@ -66,8 +82,7 @@ y_pred_proba = rf_model.predict_proba(X_test)[:, 1]
 # Оценка модели
 st.subheader("Оценка модели")
 st.write("Матрица ошибок:")
-conf_matrix = confusion_matrix(y_test, y_pred)
-st.write(conf_matrix)
+plot_confusion_matrix(y_test, y_pred)
 
 # Отчет по классификации
 st.write("Отчет по классификации:")
