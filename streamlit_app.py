@@ -1,77 +1,82 @@
-import streamlit as st
 import pandas as pd
 import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    confusion_matrix,
+    classification_report,
+    roc_auc_score,
+)
+from sklearn.preprocessing import StandardScaler
+import streamlit as st
 
-st.title('Zoir-STREAMLIT')
+# Функция для построения ROC-кривой
+def plot_roc_curve(y_test, y_pred_proba):
+    from sklearn.metrics import roc_curve
+    fpr, tpr, _ = roc_curve(y_test, y_pred_proba)
+    roc_auc = roc_auc_score(y_test, y_pred_proba)
 
-with st.expander('Initial data'):
-    df = pd.read_csv('https://raw.githubusercontent.com/dataprofessor/data/master/penguins_cleaned.csv')
-    
-    st.write('**X**')
-    X_raw = df.drop('species', axis=1)
-    st.write(X_raw)
+    plt.figure(figsize=(10, 7))
+    plt.plot(fpr, tpr, color='blue', label='ROC-кривая (AUC = {:.2f})'.format(roc_auc))
+    plt.plot([0, 1], [0, 1], color='red', linestyle='--')  # Линия случайного выбора
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('Ложноположительная ставка (FPR)')
+    plt.ylabel('Истинноположительная ставка (TPR)')
+    plt.title('ROC-кривая')
+    plt.legend(loc='lower right')
+    st.pyplot(plt)
 
-    st.write('**y**')
-    y_raw = df['species']
-    st.write(y_raw)
+# Заголовок приложения
+st.title("Модель классификации для выбора детского сада")
 
-with st.expander('Data visualization'):
-    st.scatter_chart(data=df, x='bill_length_mm', y='body_mass_g', color='species')
-    st.scatter_chart(data=df, x='bill_depth_mm', y='sex', color='species')
+# Загрузка данных
+url = "https://archive.ics.uci.edu/ml/machine-learning-databases/nursery/nursery.data"
+columns = ["parents", "has_nurs", "form", "children", "housing", "finance", "social", "health", "decision"]
+data = pd.read_csv(url, header=None, names=columns)
 
-with st.sidebar:
-    st.header('Input features')
-    island = st.selectbox('Island', ('Biscoe', 'Dream', 'Torgersen'))
-    bill_length_mm = st.slider('Bill length (mm)', 32.1, 59.6, 43.9)
-    bill_depth_mm = st.slider('Bill depth (mm)', 13.1, 21.5, 17.2)
-    flipper_length_mm = st.slider('Flipper length (mm)', 172.0, 231.0, 201.0)
-    body_mass_g = st.slider('Body mass (g)', 2700.0, 6300.0, 4207.0)
-    gender = st.selectbox('Gender', ('male', 'female'))
-    data = {
-        'island': island,
-        'bill_length_mm': bill_length_mm,
-        'bill_depth_mm': bill_depth_mm,
-        'flipper_length_mm': flipper_length_mm,
-        'body_mass_g': body_mass_g,
-        'sex': gender
-    }
-    input_df = pd.DataFrame(data, index=[0])
-    input_penguins = pd.concat([input_df, X_raw], axis=0)
+# Отображение данных
+st.subheader("Данные")
+st.write(data)
 
+# Кодирование категориальных признаков
+data_encoded = pd.get_dummies(data, drop_first=True)
 
-encode = ['island', 'sex']
-df_penguins = pd.get_dummies(input_penguins, prefix=encode)
+# Разделение на признаки и целевую переменную
+X = data_encoded.drop('decision_recommend', axis=1)
+y = data_encoded['decision_recommend']
 
-X = df_penguins[1:]
-input_row = df_penguins[:1]
+# Масштабирование данных
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
 
+# Разделение данных на обучающую и тестовую выборки
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42, stratify=y)
 
-target_mapper = {'Adelie': 0, 'Chinstrap': 1, 'Gentoo': 2}
-y = y_raw.map(target_mapper)
+# Обучение модели
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
 
-with st.expander('Data preparation'):
-    st.write('**Encoded X (input penguin)**')
-    st.write(input_row)
-    st.write('**Encoded y**')
-    st.write(y)
+# Прогнозирование
+y_pred = rf_model.predict(X_test)
+y_pred_proba = rf_model.predict_proba(X_test)[:, 1]
 
-clf = RandomForestClassifier()
-clf.fit(X, y)
+# Оценка модели
+st.subheader("Оценка модели")
+st.write("Матрица ошибок:")
+conf_matrix = confusion_matrix(y_test, y_pred)
+st.write(conf_matrix)
 
+# Отчет по классификации
+st.write("Отчет по классификации:")
+st.text(classification_report(y_test, y_pred))
 
-prediction = clf.predict(input_row)
-prediction_proba = clf.predict_proba(input_row)
-
-df_prediction_proba = pd.DataFrame(prediction_proba, columns=['Adelie', 'Chinstrap', 'Gentoo'])
-
-st.subheader('Predicted Species')
-st.dataframe(df_prediction_proba,
-             column_config={
-                 'Adelie': st.column_config.ProgressColumn('Adelie', format='%f', width='medium', min_value=0, max_value=1),
-                 'Chinstrap': st.column_config.ProgressColumn('Chinstrap', format='%f', width='medium', min_value=0, max_value=1),
-                 'Gentoo': st.column_config.ProgressColumn('Gentoo', format='%f', width='medium', min_value=0, max_value=1),
-             }, hide_index=True)
-
-penguins_species = np.array(['Adelie', 'Chinstrap', 'Gentoo'])
-st.success(str(penguins_species[prediction][0]))
+# ROC AUC и визуализация ROC-кривой
+if len(np.unique(y_pred)) > 1:  # Проверка наличия обоих классов
+    roc_auc = roc_auc_score(y_test, y_pred_proba)
+    st.write(f"ROC AUC: {roc_auc:.2f}")
+    plot_roc_curve(y_test, y_pred_proba)
+else:
+    st.write("Не удалось рассчитать ROC AUC, так как был предсказан только один класс.")
